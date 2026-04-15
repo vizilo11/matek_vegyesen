@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Végtelen Mértani Sor – Geometriai Bizonyítás</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0f0c08;
+      --surface: #1c1610;
+      --surf2:   #261e13;
+      --amber:   #f0a832;
+      --rust:    #c84e18;
+      --cream:   #f0e0c0;
+      --dim:     #9e8a6a;
+      --gold:    #c89028;
+      --yellow:  #ffd04a;
+      --green:   #1ec878;
+      --blue:    #4aa8f0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--cream);
+      font-family: 'Crimson Pro', Georgia, serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.2rem 1.2rem 3rem;
+      gap: 1.6rem;
+    }
+
+    header { text-align: center; }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.4rem, 3.5vw, 2.3rem);
+      font-weight: 700;
+      letter-spacing: .07em;
+      color: var(--amber);
+      text-shadow: 0 0 40px rgba(240,168,50,.3);
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--dim);
+      font-style: italic;
+      margin-top: .3rem;
+      letter-spacing: .03em;
+    }
+
+    /* ── CANVAS ── */
+    canvas {
+      border-radius: 10px;
+      border: 1px solid rgba(200,144,40,.2);
+      background: var(--surface);
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .85rem;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+      width: 100%;
+    }
+
+    .slider-label {
+      font-size: .95rem;
+      color: var(--dim);
+      white-space: nowrap;
+      min-width: 7ch;
+    }
+
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 5px;
+      background: var(--surf2);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      background: var(--amber);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(240,168,50,.5);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 20px; height: 20px;
+      background: var(--amber);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    .val-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--amber);
+      min-width: 5ch;
+      text-align: right;
+    }
+
+    .btn-row { display: flex; gap: .7rem; }
+
+    button {
+      font-family: 'Cinzel', serif;
+      font-size: .82rem;
+      letter-spacing: .05em;
+      padding: .48rem 1.2rem;
+      border: 1px solid rgba(200,144,40,.35);
+      border-radius: 6px;
+      background: var(--surf2);
+      color: var(--gold);
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    button:hover { background: rgba(200,144,40,.15); border-color: var(--gold); color: var(--amber); }
+    button.active { background: rgba(240,168,50,.2); border-color: var(--amber); color: var(--yellow); }
+
+    /* ── FORMULA BOX ── */
+    .formula-box {
+      background: var(--surface);
+      border: 1px solid rgba(200,144,40,.22);
+      border-radius: 14px;
+      padding: 1.1rem 1.8rem 1.2rem;
+      max-width: 560px;
+      width: 100%;
+    }
+
+    .formula-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: .25rem .4rem;
+      font-style: italic;
+      font-size: 1.4rem;
+      line-height: 2;
+    }
+
+    .fv  { color: var(--amber); }
+    .fop { color: var(--dim); }
+    .feq { color: var(--cream); font-size: 1.3rem; }
+
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 .15rem;
+      line-height: 1.15;
+    }
+    .frac span:first-child { border-bottom: 1.5px solid var(--dim); padding-bottom: 1px; }
+    .frac span { font-size: 1rem; display: block; text-align: center; }
+
+    .formula-nums {
+      display: flex;
+      justify-content: space-between;
+      margin-top: .8rem;
+      font-size: .92rem;
+      flex-wrap: wrap;
+      gap: .3rem;
+    }
+
+    .num-item { color: var(--dim); font-style: italic; }
+    .num-item b { font-family: 'JetBrains Mono', monospace; font-style: normal; }
+    .num-item.limit b { color: var(--amber); }
+    .num-item.partial b { color: var(--green); }
+
+    /* convergence bar */
+    .conv-wrap {
+      margin-top: .7rem;
+      background: var(--surf2);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .conv-bar {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--green), var(--amber));
+      transition: width .35s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── EXPLANATION ── */
+    .explanation {
+      max-width: 560px;
+      text-align: center;
+      font-size: 1.02rem;
+      line-height: 1.72;
+      color: var(--dim);
+    }
+    .explanation b  { color: var(--cream); font-weight: 600; }
+    .explanation em { color: var(--amber); font-style: normal; }
+
+    footer {
+      font-size: .78rem;
+      color: rgba(158,138,106,.38);
+      letter-spacing: .03em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Végtelen Mértani Sor</h1>
+  <p class="subtitle">Hasonló háromszögekkel való geometriai bizonyítás</p>
+</header>
+
+<canvas id="canvas" width="740" height="400"></canvas>
+
+<div class="controls">
+  <div class="slider-row">
+    <span class="slider-label">r arány:</span>
+    <input type="range" id="sliderR" min="25" max="85" value="60" step="1">
+    <span class="val-badge" id="badgeR">0.60</span>
+  </div>
+  <div class="slider-row">
+    <span class="slider-label">Tagok:</span>
+    <input type="range" id="sliderN" min="1" max="10" value="3" step="1">
+    <span class="val-badge" id="badgeN">3</span>
+  </div>
+  <div class="btn-row">
+    <button id="btnPlay">▶ Lejátszás</button>
+    <button id="btnReset">↺ Reset</button>
+  </div>
+</div>
+
+<div class="formula-box">
+  <div class="formula-main">
+    <span class="frac fv">
+      <span>a + ar + ar² + ar³ + …</span>
+      <span class="fop" style="color:var(--dim)"><span style="font-size:.85em;font-style:italic">1/r</span></span>
+    </span>
+    <span class="feq">&nbsp;=&nbsp;</span>
+    <span class="frac fv">
+      <span>ar</span>
+      <span>1 − r</span>
+    </span>
+    <span class="feq" style="font-style:normal">&nbsp;&nbsp;⟹&nbsp;&nbsp;</span>
+    <span class="fv" style="font-size:1.3rem">S</span>
+    <span class="feq">=</span>
+    <span class="frac fv">
+      <span>a</span>
+      <span>1 − r</span>
+    </span>
+  </div>
+
+  <div class="formula-nums">
+    <span class="num-item partial">Részletösszeg (S<sub id="nSub">3</sub>): <b id="partialVal">—</b></span>
+    <span class="num-item limit">Határérték (S<sub>∞</sub>): <b id="limitVal">—</b></span>
+  </div>
+  <div class="conv-wrap">
+    <div class="conv-bar" id="convBar" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="explanation">
+  A nagy derékszögű háromszög magassága <em>1/r</em>, alapja <em>a/(1−r)</em>.
+  A lépcső-téglalapok szélességei rendre <b>a, ar, ar², …</b>
+  és pontosan kitöltik az alap hosszát. A hézag-háromszögek (zölddel jelölve)
+  egymáshoz <b>hasonlók</b>, arányuk <em>r</em> — ebből a hasonlóság elvével
+  következik az összegképlet: <b>S&thinsp;=&thinsp;a/(1−r)</b>.
+</div>
+
+<footer>Húzd a csúszkákat · r ∈ (0, 1)</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   CONFIG & PALETTE
+═══════════════════════════════════════════════════════ */
+const BG      = '#0f0c08';
+const AMBER   = '#f0a832';
+const RUST    = '#c84e18';
+const CREAM   = '#f0e0c0';
+const DIM     = 'rgba(240,224,192,0.38)';
+const GREEN   = '#1ec878';
+const GREEN_F = 'rgba(30,200,120,0.38)';
+const BLUE    = '#4aa8f0';
+const YELLOW  = '#ffd04a';
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const CW = 740, CH = 400;
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let R = 0.60;   // ratio
+let N = 3;      // number of terms shown
+let A = 1;      // first term (fixed = 1)
+let animating  = false;
+let animTimer  = null;
+
+/* ═══════════════════════════════════════════════════════
+   LAYOUT HELPERS
+═══════════════════════════════════════════════════════ */
+const ML = 72, MR = 45, MT = 38, MB = 82;
+const DW = CW - ML - MR;   // 623
+const DH = CH - MT - MB;   // 280
+
+function computeGeom(r) {
+  const totalW = A / (1 - r);
+  const totalH = 1 / r;
+  const scale  = Math.min(DW / totalW, DH / totalH) * 0.92;
+  const ox = ML + (DW - totalW * scale) / 2;
+  const oy = MT + DH + (DH - totalH * scale) / 2 + 8;
+  return { scale, ox, oy, totalW, totalH };
+}
+
+/* Math → Canvas */
+function mc(ox, oy, scale, mx, my) {
+  return [ox + mx * scale, oy - my * scale];
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRAW
+═══════════════════════════════════════════════════════ */
+function draw() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  const r = R;
+  const { scale, ox, oy, totalW, totalH } = computeGeom(r);
+
+  const p = (mx, my) => mc(ox, oy, scale, mx, my);
+
+  /* ── Rectangle data ── */
+  function rectData(i) {
+    const xL = A * (1 - Math.pow(r, i))     / (1 - r);
+    const xR = A * (1 - Math.pow(r, i + 1)) / (1 - r);
+    const h  = Math.pow(r, i);          // height = r^i
+    const hL = i === 0 ? totalH : Math.pow(r, i - 1); // hyp height at xL = r^(i-1)
+    return { xL, xR, h, hL };
+  }
+
+  /* ── 1. Big triangle ── */
+  const [tx0, ty0] = p(0, 0);
+  const [tx1, ty1] = p(0, totalH);
+  const [tx2, ty2] = p(totalW, 0);
+
+  ctx.beginPath();
+  ctx.moveTo(tx0, ty0);
+  ctx.lineTo(tx1, ty1);
+  ctx.lineTo(tx2, ty2);
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(240,224,192,0.28)';
+  ctx.lineWidth   = 1.2;
+  ctx.stroke();
+
+  /* ── 2. Rectangles ── */
+  const visN = Math.min(N, 10);
+  for (let i = 0; i < visN; i++) {
+    const { xL, xR, h } = rectData(i);
+    const [cx1, cy1] = p(xL, h);
+    const [cx2, cy2] = p(xR, 0);
+    const w = (xR - xL) * scale;
+    const ht = h * scale;
+
+    // skip tiny rects
+    if (w < 0.8) break;
+
+    ctx.fillStyle = i % 2 === 0 ? AMBER : RUST;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(cx1, cy1, w, ht);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = BG;
+    ctx.lineWidth   = Math.max(0.4, 1.4 - i * 0.12);
+    ctx.strokeRect(cx1, cy1, w, ht);
+  }
+
+  /* ── 3. Gap triangles (green) ── */
+  for (let i = 0; i < visN; i++) {
+    const { xL, xR, h, hL } = rectData(i);
+    const [gx0, gy0] = p(xL, hL);  // top (on hypotenuse)
+    const [gx1, gy1] = p(xL, h);   // bottom-left (top-left of rect)
+    const [gx2, gy2] = p(xR, h);   // bottom-right (on hypotenuse)
+
+    const w = (xR - xL) * scale;
+    if (w < 0.8) break;
+
+    const isLast = i === visN - 1;
+
+    ctx.beginPath();
+    ctx.moveTo(gx0, gy0);
+    ctx.lineTo(gx1, gy1);
+    ctx.lineTo(gx2, gy2);
+    ctx.closePath();
+
+    if (isLast) {
+      ctx.fillStyle = GREEN_F;
+      ctx.fill();
+    }
+    ctx.strokeStyle = isLast ? GREEN : 'rgba(30,200,120,0.5)';
+    ctx.lineWidth   = isLast ? 1.8 : 0.9;
+    ctx.stroke();
+  }
+
+  /* ── 4. Dotted "tail" triangle (remaining series) ── */
+  if (visN < 10) {
+    const { xR: tailX, h: tailH } = rectData(visN - 1);
+    // The "tail" triangle after the last shown step
+    // Vertices: (tailX, 0), (tailX, tailH * r), (totalW, 0)
+    // But actually the remaining hyp vertex is:
+    //   after visN rects, remaining staircase starts at (xR_{n-1}, h_n)
+    const remH = Math.pow(r, visN); // hyp height at tailX = r^(n-1) * r = r^n ... let me recalc
+    // hyp at xR_{n-1} = h_{n-1} = r^(n-1) — already drawn
+    // The remaining triangle for INFINITE tail starts at (tailX, 0) up to hyp
+    const [rx0, ry0] = p(tailX, 0);
+    const [rx1, ry1] = p(tailX, Math.pow(r, visN - 1));
+    const [rx2, ry2] = p(totalW, 0);
+
+    ctx.beginPath();
+    ctx.moveTo(rx0, ry0);
+    ctx.lineTo(rx1, ry1);
+    ctx.lineTo(rx2, ry2);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(200,144,40,0.22)';
+    ctx.setLineDash([4, 5]);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* ── 5. Blue vertex dots ── */
+  const dots = [[0, 0], [0, totalH], [totalW, 0]];
+  dots.forEach(([mx, my]) => {
+    const [dx, dy] = p(mx, my);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = BLUE;
+    ctx.fill();
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  /* ── 6. Axis labels ── */
+  ctx.font = 'italic 15px "Crimson Pro", serif';
+  ctx.textBaseline = 'middle';
+
+  // 1/r label on left
+  const [lx, ly] = p(0, totalH / 2);
+  ctx.fillStyle = CREAM;
+  ctx.textAlign = 'right';
+  drawFracLabel(ctx, '1', 'r', lx - 14, ly, 15);
+
+  // bottom labels: a, ar, ar², ar³, ...
+  ctx.fillStyle = DIM;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = 'italic 13px "Crimson Pro", serif';
+  for (let i = 0; i < Math.min(visN, 6); i++) {
+    const { xL, xR, h } = rectData(i);
+    if ((xR - xL) * scale < 14) break;
+    const midX = (xL + xR) / 2;
+    const [lbx, lby] = p(midX, 0);
+    ctx.fillStyle = 'rgba(240,224,192,0.55)';
+    ctx.fillText(termLabel(i), lbx, lby + 10);
+  }
+
+  // Height label inside first rect (value "1")
+  if (scale > 30) {
+    const { xL, xR } = rectData(0);
+    const midX = (xL + xR) / 2 * 0.55; // slightly left
+    const [hx, hy] = p(xL + (xR - xL) * 0.5, 0.5);
+    ctx.fillStyle = BG;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.font = 'italic 16px "Crimson Pro", serif';
+    ctx.fillText('1', hx, hy);
+  }
+
+  // r^i labels inside other rects
+  for (let i = 1; i < Math.min(visN, 5); i++) {
+    const { xL, xR, h } = rectData(i);
+    if ((xR - xL) * scale < 18 || h * scale < 18) continue;
+    const [hx, hy] = p((xL + xR) / 2, h / 2);
+    ctx.fillStyle = BG;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.font = 'italic 13px "Crimson Pro", serif';
+    ctx.fillText(heightLabel(i), hx, hy);
+  }
+
+  /* ── 7. Green gap triangle annotation (last visible) ── */
+  if (visN >= 2) {
+    drawGapAnnotation(ctx, p, rectData, visN - 1, scale, r);
+  }
+
+  /* ── 8. Update formula panel ── */
+  updateFormula(r, N);
+}
+
+/* ───────────────────────────────────────── helpers ── */
+function termLabel(i) {
+  const supers = ['', '', '²', '³', '⁴', '⁵', '⁶'];
+  if (i === 0) return 'a';
+  if (i === 1) return 'ar';
+  return 'ar' + (supers[i] || `^${i}`);
+}
+
+function heightLabel(i) {
+  const supers = ['', '', '²', '³', '⁴'];
+  if (i === 1) return 'r';
+  return 'r' + (supers[i] || `^${i}`);
+}
+
+function drawFracLabel(ctx, num, den, x, y, size) {
+  ctx.save();
+  ctx.font = `italic ${size}px "Crimson Pro", serif`;
+  ctx.textAlign  = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle  = CREAM;
+  const lineH = size + 3;
+
+  // numerator
+  ctx.fillText(num, x, y - lineH / 2 - 1);
+  // bar
+  ctx.beginPath();
+  ctx.moveTo(x - size * 0.4, y);
+  ctx.lineTo(x + size * 0.4, y);
+  ctx.strokeStyle = CREAM;
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  // denominator
+  ctx.fillText(den, x, y + lineH / 2 + 1);
+
+  ctx.restore();
+}
+
+function drawGapAnnotation(ctx, p, rectData, i, scale, r) {
+  const { xL, xR, h, hL } = rectData(i);
+  const gapW = (xR - xL) * scale;
+  const gapH = (hL - h) * scale;
+  if (gapW < 10 || gapH < 10) return;
+
+  // Label the base "ar^i" and height "(1-r)"
+  const [gx0, gy0] = p(xL, hL);   // top-left (apex)
+  const [gx1, gy1] = p(xL, h);    // bottom-left
+  const [gx2, gy2] = p(xR, h);    // bottom-right
+
+  ctx.save();
+  ctx.font = 'italic 12px "Crimson Pro", serif';
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'center';
+  ctx.fillStyle    = GREEN;
+
+  // Base label (below gap triangle)
+  if (gapW > 22) {
+    ctx.fillText(termLabel(i), (gx1 + gx2) / 2, gy2 + 4);
+  }
+
+  // Height label (left side of gap triangle)
+  if (gapH > 20) {
+    ctx.save();
+    ctx.translate(gx1 - 8, (gy0 + gy1) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(i === 0 ? '1/r − 1' : '(1−r)r^' + (i > 1 ? (i - 1) : ''), 0, 0);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+/* ═══════════════════════════════════════════════════════
+   FORMULA PANEL UPDATE
+═══════════════════════════════════════════════════════ */
+function updateFormula(r, n) {
+  const limit   = A / (1 - r);
+  const partial = A * (1 - Math.pow(r, n)) / (1 - r);
+  const pct     = partial / limit * 100;
+
+  document.getElementById('nSub').textContent      = n;
+  document.getElementById('partialVal').textContent = partial.toFixed(4);
+  document.getElementById('limitVal').textContent   = limit.toFixed(4);
+  document.getElementById('convBar').style.width    = pct.toFixed(2) + '%';
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════════════════ */
+const sliderR = document.getElementById('sliderR');
+const sliderN = document.getElementById('sliderN');
+const badgeR  = document.getElementById('badgeR');
+const badgeN  = document.getElementById('badgeN');
+
+sliderR.addEventListener('input', () => {
+  R = parseInt(sliderR.value) / 100;
+  badgeR.textContent = R.toFixed(2);
+  draw();
+});
+
+sliderN.addEventListener('input', () => {
+  if (animating) stopAnim();
+  N = parseInt(sliderN.value);
+  badgeN.textContent = N;
+  draw();
+});
+
+/* ── Animation ── */
+const btnPlay  = document.getElementById('btnPlay');
+const btnReset = document.getElementById('btnReset');
+
+function startAnim() {
+  animating = true;
+  btnPlay.textContent = '⏹ Megállít';
+  btnPlay.classList.add('active');
+
+  N = 1;
+  sliderN.value = N;
+  badgeN.textContent = N;
+  draw();
+
+  function step() {
+    N = Math.min(N + 1, 10);
+    sliderN.value = N;
+    badgeN.textContent = N;
+    draw();
+    if (N < 10 && animating) {
+      animTimer = setTimeout(step, 800);
+    } else {
+      stopAnim();
+    }
+  }
+  animTimer = setTimeout(step, 900);
+}
+
+function stopAnim() {
+  animating = false;
+  clearTimeout(animTimer);
+  btnPlay.textContent = '▶ Lejátszás';
+  btnPlay.classList.remove('active');
+}
+
+btnPlay.addEventListener('click', () => {
+  if (animating) stopAnim();
+  else startAnim();
+});
+
+btnReset.addEventListener('click', () => {
+  stopAnim();
+  R = 0.60;
+  N = 3;
+  sliderR.value = 60;
+  sliderN.value = 3;
+  badgeR.textContent = '0.60';
+  badgeN.textContent = '3';
+  draw();
+});
+
+/* ── Initial draw ── */
+draw();
+</script>
+</body>
+</html>

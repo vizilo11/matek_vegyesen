@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galton-Deszka – Binomiális Eloszlás</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0f0c08;
+      --surface: #1c1610;
+      --surf2:   #261e13;
+      --amber:   #f0a832;
+      --rust:    #c84e18;
+      --cream:   #f0e0c0;
+      --dim:     #9e8a6a;
+      --gold:    #c89028;
+      --yellow:  #ffd04a;
+      --green:   #1ec878;
+      --blue:    #4aa8f0;
+      --pink:    #e0609a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--cream);
+      font-family: 'Crimson Pro', Georgia, serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1.2rem 3rem;
+      gap: 1.4rem;
+    }
+
+    header { text-align: center; }
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: .07em;
+      color: var(--amber);
+      text-shadow: 0 0 40px rgba(240,168,50,.3);
+    }
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--dim);
+      font-style: italic;
+      margin-top: .3rem;
+      letter-spacing: .03em;
+    }
+
+    canvas {
+      border-radius: 10px;
+      border: 1px solid rgba(200,144,40,.18);
+      background: var(--surface);
+      display: block;
+      max-width: 100%;
+    }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .8rem;
+      width: 100%;
+      max-width: 580px;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+      width: 100%;
+    }
+    .slider-label {
+      font-size: .95rem;
+      color: var(--dim);
+      white-space: nowrap;
+      min-width: 10ch;
+    }
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 5px;
+      background: var(--surf2);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      background: var(--amber);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(240,168,50,.5);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 20px; height: 20px;
+      background: var(--amber);
+      border-radius: 50%;
+      border: none;
+    }
+    .val-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--amber);
+      min-width: 4.5ch;
+      text-align: right;
+    }
+    .btn-row { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
+    button {
+      font-family: 'Cinzel', serif;
+      font-size: .82rem;
+      letter-spacing: .05em;
+      padding: .48rem 1.3rem;
+      border: 1px solid rgba(200,144,40,.35);
+      border-radius: 6px;
+      background: var(--surf2);
+      color: var(--gold);
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    button:hover  { background: rgba(200,144,40,.15); border-color: var(--gold); color: var(--amber); }
+    button.active { background: rgba(240,168,50,.2); border-color: var(--amber); color: var(--yellow); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: .95rem;
+      color: var(--dim);
+      font-style: italic;
+    }
+    .stats-strip b {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-style: normal;
+      color: var(--amber);
+    }
+
+    /* ── FORMULA BOX ── */
+    .formula-box {
+      background: var(--surface);
+      border: 1px solid rgba(200,144,40,.22);
+      border-radius: 14px;
+      padding: 1rem 1.8rem 1.1rem;
+      max-width: 580px;
+      width: 100%;
+      text-align: center;
+    }
+    .formula-main {
+      font-style: italic;
+      font-size: 1.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: .2rem .4rem;
+      line-height: 2;
+    }
+    .fv  { color: var(--amber); }
+    .fop { color: var(--dim); }
+    .frac {
+      display: inline-flex; flex-direction: column; align-items: center;
+      vertical-align: middle; margin: 0 .15rem; line-height: 1.15;
+    }
+    .frac span:first-child { border-bottom: 1.5px solid var(--dim); padding-bottom: 1px; }
+    .frac span { font-size: 1rem; display: block; text-align: center; }
+
+    .formula-note { margin-top: .5rem; font-size: .92rem; color: var(--dim); font-style: italic; }
+    .formula-note b { color: var(--cream); font-style: normal; }
+
+    /* ── EXPLANATION ── */
+    .explanation {
+      max-width: 560px;
+      text-align: center;
+      font-size: 1.02rem;
+      line-height: 1.72;
+      color: var(--dim);
+    }
+    .explanation b  { color: var(--cream); font-weight: 600; }
+    .explanation em { color: var(--amber); font-style: normal; }
+
+    footer { font-size: .78rem; color: rgba(158,138,106,.38); letter-spacing: .03em; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Galton-Deszka</h1>
+  <p class="subtitle">Binomiális eloszlás → normális eloszlás szemléltetése</p>
+</header>
+
+<canvas id="canvas" width="700" height="600"></canvas>
+
+<div class="controls">
+  <div class="slider-row">
+    <span class="slider-label">Szint (sor):</span>
+    <input type="range" id="sliderN" min="3" max="14" value="8" step="1">
+    <span class="val-badge" id="badgeN">8</span>
+  </div>
+  <div class="slider-row">
+    <span class="slider-label">Golyók száma:</span>
+    <input type="range" id="sliderB" min="10" max="500" value="150" step="10">
+    <span class="val-badge" id="badgeB">150</span>
+  </div>
+  <div class="slider-row">
+    <span class="slider-label">Sebesség:</span>
+    <input type="range" id="sliderS" min="1" max="10" value="5" step="1">
+    <span class="val-badge" id="badgeS">5</span>
+  </div>
+  <div class="btn-row">
+    <button id="btnPlay">▶ Indítás</button>
+    <button id="btnReset">↺ Reset</button>
+  </div>
+</div>
+
+<div class="stats-strip" id="statsStrip">
+  <span>Repülő: <b id="statFlight">0</b></span>
+  <span>Landolt: <b id="statLanded">0</b> / <b id="statTotal">150</b></span>
+  <span>Normálisan közelítve: <b id="statNorm">—</b></span>
+</div>
+
+<div class="formula-box">
+  <div class="formula-main">
+    <span class="fv">P(X=k)</span>
+    <span class="fop">=</span>
+    <span class="frac fv">
+      <span>n!</span>
+      <span>k!(n−k)!</span>
+    </span>
+    <span class="fv">·</span>
+    <span class="fv">p<sup style="font-size:.7em">k</sup></span>
+    <span class="fv">(1−p)<sup style="font-size:.7em">n−k</sup></span>
+    <span class="fop">&nbsp;&nbsp;p = ½</span>
+  </div>
+  <div class="formula-note">
+    Nagy <b>n</b>-nél a binomiális eloszlás közelít a normálishoz:
+    <b>μ = n/2, σ = √(n/4)</b>
+    &nbsp;— ezt mutatja a <span style="color:var(--green)">zöld görbe</span>
+  </div>
+</div>
+
+<div class="explanation">
+  Minden golyó <em>n</em> szintet tesz meg. Minden szögecsnél egyforma
+  eséllyel (<b>50–50%</b>) pattan jobbra vagy balra. A végső rekeszben
+  landolt golyók száma egy <b>binomiális eloszlást</b> követ.
+  Sok golyó esetén (<em>n</em> is nő) ez a haranggörbe köré tömörül.
+</div>
+
+<footer>Állítsd a csúszkákat, majd nyomj Indítást</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   CONSTANTS & LAYOUT
+═══════════════════════════════════════════════════ */
+const CW = 700, CH = 600;
+const BOARD_T = 28, BOARD_B = 360;
+const HIST_T  = 378, HIST_B  = 558;
+const HIST_LABEL_Y = 572;
+
+const BG      = '#0f0c08';
+const AMBER   = '#f0a832';
+const RUST    = '#c84e18';
+const CREAM   = '#f0e0c0';
+const DIM     = 'rgba(240,224,192,0.38)';
+const GREEN   = '#1ec878';
+const GREEN_A = 'rgba(30,200,120,0.6)';
+const YELLOW  = '#ffd04a';
+const BLUE    = '#4aa8f0';
+const GOLD    = '#c89028';
+
+const BALL_PALETTE = [AMBER, RUST, YELLOW, '#4aa8f0', '#e0609a', '#9b8fff', '#48d8c0'];
+
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+let rows    = 8;
+let nBalls  = 150;
+let speed   = 5;
+
+let bins         = [];
+let activeBalls  = [];
+let launched     = 0;
+let totalLanded  = 0;
+let running      = false;
+let animHandle   = null;
+let frameIdx     = 0;
+
+/* ═══════════════════════════════════════════════════
+   GEOMETRY
+═══════════════════════════════════════════════════ */
+function spacing(n) {
+  return Math.min(46, Math.floor(580 / (n + 1.5)));
+}
+
+function rowHeight(n) {
+  const boardH = BOARD_B - BOARD_T - 50;
+  return boardH / (n + 0.8);
+}
+
+function pegXY(r, c, n) {
+  const sp = spacing(n);
+  const rh = rowHeight(n);
+  const cx = CW / 2;
+  const x = cx + (c - r / 2) * sp;
+  const y = BOARD_T + 42 + r * rh;
+  return [x, y];
+}
+
+function binCenterX(b, n) {
+  return CW / 2 + (b - n / 2) * spacing(n);
+}
+
+function binEntryY() { return BOARD_B - 8; }
+
+/* ═══════════════════════════════════════════════════
+   MATH HELPERS
+═══════════════════════════════════════════════════ */
+function binomCoeff(n, k) {
+  if (k < 0 || k > n) return 0;
+  if (k === 0 || k === n) return 1;
+  let r = 1;
+  for (let i = 0; i < Math.min(k, n - k); i++) {
+    r = r * (n - i) / (i + 1);
+  }
+  return r;
+}
+
+function binomPMF(n, k) {
+  return binomCoeff(n, k) * Math.pow(0.5, n);
+}
+
+function normalPDF(x, mu, sigma) {
+  const z = (x - mu) / sigma;
+  return Math.exp(-0.5 * z * z) / (sigma * Math.sqrt(2 * Math.PI));
+}
+
+/* ═══════════════════════════════════════════════════
+   BALL
+═══════════════════════════════════════════════════ */
+function makeBall(colorIdx) {
+  const n    = rows;
+  const path = Array.from({ length: n }, () => (Math.random() < 0.5 ? 0 : 1));
+  const bin  = path.reduce((a, b) => a + b, 0);
+
+  // Precompute column at each peg row (cols[r] = col at peg row r)
+  const cols = new Array(n + 1);
+  cols[0] = 0;
+  for (let r = 1; r <= n; r++) cols[r] = cols[r - 1] + path[r - 1];
+
+  return {
+    path, bin, cols,
+    phase: 0,      // 0..n  (phase n = falling into bin)
+    t: 0,          // 0..1 progress within phase
+    done: false,
+    color: BALL_PALETTE[colorIdx % BALL_PALETTE.length]
+  };
+}
+
+// Returns {fx, fy, tx, ty} for current phase
+function phaseEndpoints(ball) {
+  const n  = rows;
+  const p  = ball.phase;
+  const sp = spacing(n);
+  const rh = rowHeight(n);
+  const cx = CW / 2;
+
+  let fx, fy, tx, ty;
+
+  if (p === 0) {
+    // Starting funnel → first peg
+    fx = cx;
+    fy = BOARD_T + 8;
+    const [px, py] = pegXY(0, 0, n);
+    tx = px; ty = py;
+  } else if (p < n) {
+    const [x1, y1] = pegXY(p - 1, ball.cols[p - 1], n);
+    const [x2, y2] = pegXY(p,     ball.cols[p],     n);
+    fx = x1; fy = y1;
+    tx = x2; ty = y2;
+  } else {
+    // Last peg → bin entry
+    const [x1, y1] = pegXY(n - 1, ball.cols[n - 1], n);
+    fx = x1; fy = y1;
+    tx = binCenterX(ball.bin, n);
+    ty = binEntryY();
+  }
+
+  return { fx, fy, tx, ty };
+}
+
+function easeIn(t)    { return t * t; }
+function easeIO(t)    { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+function ballXY(ball) {
+  const { fx, fy, tx, ty } = phaseEndpoints(ball);
+  const t = ball.t;
+  return {
+    x: fx + (tx - fx) * easeIO(t),
+    y: fy + (ty - fy) * easeIn(t)
+  };
+}
+
+/* ═══════════════════════════════════════════════════
+   DRAW
+═══════════════════════════════════════════════════ */
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+
+function drawBoard() {
+  const n  = rows;
+  const sp = spacing(n);
+  const pegR = Math.max(3, Math.min(5.5, sp * 0.14));
+
+  // Background board area
+  ctx.fillStyle = 'rgba(200,144,40,0.04)';
+  roundRect(ctx, 30, BOARD_T, CW - 60, BOARD_B - BOARD_T, 8);
+  ctx.fill();
+
+  // Funnel
+  const cx = CW / 2;
+  const funnelY = BOARD_T + 24;
+  const funnelW = sp * 0.55;
+  ctx.beginPath();
+  ctx.moveTo(cx - funnelW * 2.2, BOARD_T + 4);
+  ctx.lineTo(cx - funnelW * 0.5, funnelY);
+  ctx.lineTo(cx + funnelW * 0.5, funnelY);
+  ctx.lineTo(cx + funnelW * 2.2, BOARD_T + 4);
+  ctx.strokeStyle = 'rgba(200,144,40,0.35)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // Pegs
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c <= r; c++) {
+      const [px, py] = pegXY(r, c, n);
+      ctx.beginPath();
+      ctx.arc(px, py, pegR, 0, Math.PI * 2);
+      ctx.fillStyle = GOLD;
+      ctx.fill();
+      ctx.strokeStyle = BG;
+      ctx.lineWidth   = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Bin dividers (vertical lines below last peg row)
+  const [, lastPegY] = pegXY(n - 1, 0, n);
+  const binLineY1 = lastPegY + rowHeight(n) * 0.6;
+  const binLineY2 = BOARD_B - 2;
+
+  for (let b = 0; b <= n + 1; b++) {
+    const x = binCenterX(b, n) - sp / 2;
+    if (x < 30 || x > CW - 30) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, binLineY1);
+    ctx.lineTo(x, binLineY2);
+    ctx.strokeStyle = 'rgba(200,144,40,0.25)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+  }
+
+  // Board bottom line
+  ctx.beginPath();
+  ctx.moveTo(30, BOARD_B);
+  ctx.lineTo(CW - 30, BOARD_B);
+  ctx.strokeStyle = 'rgba(200,144,40,0.18)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+}
+
+function drawBalls() {
+  for (let i = 0; i < activeBalls.length; i++) {
+    const ball = activeBalls[i];
+    if (ball.done) continue;
+    const { x, y } = ballXY(ball);
+    const r = Math.max(3.5, Math.min(7.5, spacing(rows) * 0.18));
+
+    ctx.save();
+    ctx.shadowColor = ball.color;
+    ctx.shadowBlur  = 10;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle   = ball.color;
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+    ctx.strokeStyle = BG;
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawHistogram() {
+  const n  = rows;
+  const sp = spacing(n);
+  const barW = sp * 0.88;
+  const maxH = HIST_B - HIST_T;
+  const maxCount = Math.max(1, ...bins);
+
+  // Background histogram strip
+  ctx.fillStyle = 'rgba(200,144,40,0.04)';
+  roundRect(ctx, 30, HIST_T, CW - 60, HIST_B - HIST_T + 20, 8);
+  ctx.fill();
+
+  // Draw bars
+  for (let b = 0; b <= n; b++) {
+    const count = bins[b] || 0;
+    const bx    = binCenterX(b, n);
+    const bh    = (count / maxCount) * maxH;
+
+    if (bh > 0) {
+      const grad = ctx.createLinearGradient(0, HIST_B - bh, 0, HIST_B);
+      grad.addColorStop(0, AMBER);
+      grad.addColorStop(1, RUST);
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.88;
+      ctx.fillRect(bx - barW / 2, HIST_B - bh, barW, bh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = BG;
+      ctx.lineWidth   = 0.5;
+      ctx.strokeRect(bx - barW / 2, HIST_B - bh, barW, bh);
+    } else {
+      // empty bin placeholder
+      ctx.fillStyle = 'rgba(200,144,40,0.08)';
+      ctx.fillRect(bx - barW / 2, HIST_B - 3, barW, 3);
+    }
+  }
+
+  // Binomial PMF theoretical curve (amber dots)
+  if (totalLanded >= 3) {
+    ctx.fillStyle = 'rgba(255,208,74,0.9)';
+    for (let b = 0; b <= n; b++) {
+      const expected = binomPMF(n, b) * totalLanded;
+      const bh = (expected / maxCount) * maxH;
+      const bx = binCenterX(b, n);
+      ctx.beginPath();
+      ctx.arc(bx, HIST_B - bh, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Connect dots
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,208,74,0.45)';
+    ctx.lineWidth   = 1.2;
+    for (let b = 0; b <= n; b++) {
+      const expected = binomPMF(n, b) * totalLanded;
+      const bh = (expected / maxCount) * maxH;
+      const bx = binCenterX(b, n);
+      if (b === 0) ctx.moveTo(bx, HIST_B - bh);
+      else ctx.lineTo(bx, HIST_B - bh);
+    }
+    ctx.stroke();
+  }
+
+  // Normal approximation curve (green, shows for n >= 5)
+  if (totalLanded >= 5 && n >= 5) {
+    const mu    = n / 2;
+    const sigma = Math.sqrt(n / 4);
+    const peakPDF = normalPDF(mu, mu, sigma);
+    const peakBinom = binomPMF(n, Math.round(mu)) * totalLanded;
+    const scale = peakBinom / peakPDF;
+
+    ctx.beginPath();
+    ctx.strokeStyle = GREEN_A;
+    ctx.lineWidth   = 2.2;
+
+    const steps = 200;
+    for (let i = 0; i <= steps; i++) {
+      const b   = i * n / steps;
+      const bx  = binCenterX(b, n);
+      const pdf = normalPDF(b, mu, sigma);
+      const bh  = (pdf * scale / maxCount) * maxH;
+      const y   = HIST_B - Math.max(0, bh);
+      if (i === 0) ctx.moveTo(bx, y);
+      else ctx.lineTo(bx, y);
+    }
+    ctx.stroke();
+  }
+
+  // Bin index labels
+  ctx.font = `${Math.max(9, Math.min(12, sp * 0.28))}px "JetBrains Mono", monospace`;
+  ctx.fillStyle   = 'rgba(158,138,106,0.55)';
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'top';
+  const labelStep = n <= 10 ? 1 : (n <= 14 ? 2 : 3);
+  for (let b = 0; b <= n; b += labelStep) {
+    ctx.fillText(b, binCenterX(b, n), HIST_LABEL_Y);
+  }
+
+  // Legend
+  ctx.font = '12px "Crimson Pro", serif';
+  ctx.textAlign   = 'left';
+  ctx.textBaseline = 'top';
+
+  ctx.fillStyle = 'rgba(255,208,74,0.8)';
+  ctx.beginPath();
+  ctx.arc(CW - 200, HIST_T + 8, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(240,224,192,0.4)';
+  ctx.fillText('Binomiális PMF', CW - 192, HIST_T + 2);
+
+  if (n >= 5) {
+    ctx.strokeStyle = GREEN_A;
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(CW - 200, HIST_T + 22);
+    ctx.lineTo(CW - 188, HIST_T + 22);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(240,224,192,0.4)';
+    ctx.fillText('Normális közel.', CW - 184, HIST_T + 16);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function render() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Section labels
+  ctx.font = '11px "Cinzel", serif';
+  ctx.fillStyle   = 'rgba(200,144,40,0.35)';
+  ctx.textAlign   = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('SZÖGECS-TÁBLA', 34, BOARD_T + 2);
+  ctx.fillText('ELOSZLÁS', 34, HIST_T + 2);
+
+  drawBoard();
+  drawHistogram();
+  drawBalls();
+
+  updateStats();
+}
+
+/* ═══════════════════════════════════════════════════
+   ANIMATION LOOP
+═══════════════════════════════════════════════════ */
+function loop() {
+  frameIdx++;
+
+  // Decide how many concurrent balls and phase speed
+  const maxConcurrent = Math.max(1, Math.round(speed * 3));
+  const phaseSpeed    = 0.018 * speed;
+  const launchEvery   = Math.max(1, Math.round(12 / speed));
+
+  // Launch new ball?
+  const inFlight = activeBalls.filter(b => !b.done).length;
+  if (launched < nBalls && inFlight < maxConcurrent) {
+    if (frameIdx % launchEvery === 0) {
+      activeBalls.push(makeBall(launched));
+      launched++;
+    }
+  }
+
+  // Advance all balls
+  for (const ball of activeBalls) {
+    if (ball.done) continue;
+    ball.t += phaseSpeed;
+    if (ball.t >= 1) {
+      ball.t -= 1;
+      ball.phase++;
+      if (ball.phase > rows) {
+        ball.done = true;
+        bins[ball.bin] = (bins[ball.bin] || 0) + 1;
+        totalLanded++;
+      }
+    }
+  }
+
+  // Trim done balls (keep display clean)
+  if (activeBalls.length > 200) {
+    const live = activeBalls.filter(b => !b.done);
+    const dead = activeBalls.filter(b => b.done).slice(-10);
+    activeBalls = [...dead, ...live];
+  }
+
+  render();
+
+  if (launched < nBalls || activeBalls.some(b => !b.done)) {
+    animHandle = requestAnimationFrame(loop);
+  } else {
+    // All done
+    running = false;
+    btnPlay.textContent = '▶ Újra';
+    btnPlay.classList.remove('active');
+    render();
+  }
+}
+
+function updateStats() {
+  document.getElementById('statFlight').textContent  = activeBalls.filter(b => !b.done).length;
+  document.getElementById('statLanded').textContent  = totalLanded;
+  document.getElementById('statTotal').textContent   = nBalls;
+
+  const n = rows;
+  if (n >= 5 && totalLanded > 0) {
+    const mu = (n / 2).toFixed(1);
+    const sg = Math.sqrt(n / 4).toFixed(2);
+    document.getElementById('statNorm').textContent = `μ=${mu}, σ=${sg}`;
+  } else {
+    document.getElementById('statNorm').textContent = '—';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   RESET / INIT
+═══════════════════════════════════════════════════ */
+function resetState() {
+  if (animHandle) { cancelAnimationFrame(animHandle); animHandle = null; }
+  activeBalls  = [];
+  bins         = new Array(rows + 1).fill(0);
+  launched     = 0;
+  totalLanded  = 0;
+  frameIdx     = 0;
+  running      = false;
+  btnPlay.textContent = '▶ Indítás';
+  btnPlay.classList.remove('active');
+  render();
+}
+
+/* ═══════════════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════════════ */
+const sliderN = document.getElementById('sliderN');
+const sliderB = document.getElementById('sliderB');
+const sliderS = document.getElementById('sliderS');
+const btnPlay  = document.getElementById('btnPlay');
+const btnReset = document.getElementById('btnReset');
+
+sliderN.addEventListener('input', () => {
+  rows = parseInt(sliderN.value);
+  document.getElementById('badgeN').textContent = rows;
+  resetState();
+});
+
+sliderB.addEventListener('input', () => {
+  nBalls = parseInt(sliderB.value);
+  document.getElementById('badgeB').textContent = nBalls;
+  document.getElementById('statTotal').textContent = nBalls;
+  if (running) resetState();
+  else render();
+});
+
+sliderS.addEventListener('input', () => {
+  speed = parseInt(sliderS.value);
+  document.getElementById('badgeS').textContent = speed;
+});
+
+btnPlay.addEventListener('click', () => {
+  if (running) {
+    if (animHandle) { cancelAnimationFrame(animHandle); animHandle = null; }
+    running = false;
+    btnPlay.textContent = '▶ Folytat';
+    btnPlay.classList.remove('active');
+  } else {
+    if (totalLanded >= nBalls) resetState();
+    running = true;
+    btnPlay.textContent = '⏸ Szünet';
+    btnPlay.classList.add('active');
+    animHandle = requestAnimationFrame(loop);
+  }
+});
+
+btnReset.addEventListener('click', () => {
+  resetState();
+});
+
+// Initial render
+resetState();
+</script>
+</body>
+</html>
