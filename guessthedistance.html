@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distance Guessing Game – 5 Rounds</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f8f9fa;
+      text-align: center;
+    }
+    h1 { color: #2c3e50; }
+    .current { font-size: 1.4em; margin: 1.5em 0; }
+    input {
+      font-size: 2.2em;
+      width: 180px;
+      text-align: center;
+      padding: 8px;
+      margin: 10px;
+    }
+    button {
+      font-size: 1.3em;
+      padding: 12px 32px;
+      margin: 20px 10px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background: #2980b9; }
+    button:disabled { background: #95a5a6; cursor: not-allowed; }
+    .result {
+      margin-top: 40px;
+      padding: 20px;
+      background: #e8f4f8;
+      border-radius: 8px;
+      min-height: 120px;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    td, th {
+      padding: 10px 16px;
+      border: 1px solid #bdc3c7;
+    }
+    th { background: #ecf0f1; }
+    .ok { color: #27ae60; }
+    .error { color: #c0392b; }
+    .final { font-size: 2em; font-weight: bold; margin: 30px 0; }
+  </style>
+</head>
+<body>
+
+<h1>Mercator Projection <br> Guess the distance!</h1>
+<p class="current">Round 1 – Enter your guess:</p>
+<input type="number" id="guessInput" placeholder="" autofocus>
+<button id="submitBtn">Submit number</button>
+<div class="result" id="resultArea"></div>
+
+<script>
+const correct = [19090, 6803, 6524, 9054, 14001];
+let currentRound = 0;
+let guesses = [];
+
+const input = document.getElementById('guessInput');
+const btn = document.getElementById('submitBtn');
+const resultDiv = document.getElementById('resultArea');
+const currentText = document.querySelector('.current');
+
+function updateDisplay() {
+  if (currentRound < 5) {
+    currentText.textContent = `Round ${currentRound + 1} – Enter your guess:`;
+    input.value = '';
+    input.focus();
+    btn.disabled = false;
+  } else {
+    currentText.textContent = 'Game Over!';
+    input.disabled = true;
+    btn.disabled = true;
+    showFinalResult();
+  }
+}
+
+function showFinalResult() {
+  let sumOfErrors = 0;
+  let html = '<h2>Your Results</h2><table><tr><th>Round</th><th>Guess</th><th>Correct</th><th>Ratio</th><th>Error (|x-1|)</th></tr>';
+
+  for (let i = 0; i < 5; i++) {
+    const guess = guesses[i];
+    const trueVal = correct[i];
+    const ratio = trueVal !== 0 ? guess / trueVal : 0;
+    const error = Math.abs(ratio - 1);
+    sumOfErrors += error;
+
+    html += `<tr>
+      <td>${i+1}.</td>
+      <td>${guess}</td>
+      <td>${trueVal}</td>
+      <td>${ratio.toFixed(4)}</td>
+      <td class="${error < 0.05 ? 'ok' : 'error'}">${error.toFixed(4)}</td>
+    </tr>`;
+  }
+
+  html += '</table>';
+  html += `<div class="final">Final Score: <br> <strong>${(100 * sumOfErrors).toFixed(4)}</strong></div>`;
+
+  resultDiv.innerHTML = html;
+}
+
+btn.addEventListener('click', () => {
+  const val = parseInt(input.value.trim(), 10);
+
+  if (isNaN(val) || val < 0) {
+    alert('Please enter a positive integer!');
+    return;
+  }
+
+  guesses.push(val);
+  currentRound++;
+
+  // show feedback for current guess
+  if (currentRound <= 5) {
+    const trueVal = correct[currentRound-1];
+    const ratio = trueVal !== 0 ? val / trueVal : 0;
+    const error = Math.abs(ratio - 1);
+
+    resultDiv.innerHTML = `
+      <p class="ok">Guess ${currentRound}: <strong>${val}</strong></p>
+      <hr>
+    ` + resultDiv.innerHTML;
+  }
+
+  updateDisplay();
+});
+
+input.addEventListener('keypress', e => {
+  if (e.key === 'Enter') {
+    btn.click();
+  }
+});
+
+// initial setup
+updateDisplay();
+</script>
+</body>
+</html>
