@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Guessing Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Custom styles for the color palette grid */
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+        .color-palette-item {
+            width: 100%;
+            height: 8rem;
+            border-radius: 0.75rem;
+            transition: transform 0.1s ease-in-out, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .color-palette-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-zinc-900 text-zinc-50 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-zinc-800 p-8 rounded-2xl shadow-xl flex flex-col items-center space-y-8">
+        <div class="flex items-center space-x-4 mb-4">
+            <button id="prevTaskBtn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-50 py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                Previous
+            </button>
+            <span id="taskNumber" class="text-3xl font-bold text-zinc-300">1</span>
+            <button id="nextTaskBtn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-50 py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                Next
+            </button>
+        </div>
+
+        <div id="task1" class="space-y-6 w-full text-center">
+            <h1 class="text-xl md:text-2xl font-semibold text-zinc-200">Enter the hexadecimal code of the displayed color!</h1>
+            
+            <div class="flex items-center justify-center space-x-2">
+                <input type="text" id="puzzleCodeInput" class="bg-zinc-100 text-zinc-900 text-center w-40 p-2 rounded-lg font-mono tracking-wider" placeholder="Puzzle Code">
+                <button id="puzzleCodeBtn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-50 py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                    Load
+                </button>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-6 md:space-y-0 md:space-x-8">
+                <div class="flex flex-col items-center space-y-2">
+                    <div id="targetColor" class="w-32 h-32 md:w-40 md:h-40 rounded-xl border-4 border-zinc-700 shadow-lg"></div>
+                    <span class="text-sm text-zinc-400">Target Color</span>
+                </div>
+                
+                <div class="flex flex-col items-center space-y-4">
+                    <div class="space-y-3">
+                        <div class="flex items-center bg-white rounded-lg p-2 w-40 border border-zinc-400 focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-600 transition">
+                            <span class="text-zinc-500 font-mono pl-1">#</span>
+                            <input type="text" id="hexInput" class="bg-transparent text-zinc-900 text-left w-full font-mono tracking-wider focus:outline-none pl-1" placeholder="RRGGBB" maxlength="6">
+                        </div>
+                        <button id="guessBtn" class="w-full bg-zinc-700 hover:bg-zinc-600 text-zinc-50 py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                            Guess
+                        </button>
+                    </div>
+                    <div id="guessColor" class="w-32 h-32 md:w-40 md:h-40 rounded-xl border-4 border-zinc-700 shadow-lg"></div>
+                    <span class="text-sm text-zinc-400">Your Guess</span>
+                </div>
+            </div>
+            
+            <p id="guessCounter" class="text-zinc-400 font-medium text-lg mt-2">
+                Remaining guesses: 3
+            </p>
+            
+            <p id="distanceOutput" class="text-zinc-300 font-medium text-lg mt-2 hidden">
+            </p>
+            
+            <p id="correctCodeOutput" class="text-zinc-300 font-medium text-lg mt-2 hidden">
+                Correct code: <span id="correctCodeValue" class="text-zinc-50 font-bold"></span>
+            </p>
+        </div>
+
+        <div id="task2" class="hidden space-y-6 w-full text-center">
+            <h1 class="text-xl md:text-2xl font-semibold text-zinc-200">Select the color matching the following color code from the palette!</h1>
+            
+            <div id="targetHexCode" class="text-4xl md:text-5xl font-mono font-bold tracking-widest text-zinc-200">#000000</div>
+
+            <div id="colorPalette" class="color-palette mx-auto mt-6"></div>
+            
+            <button id="resetTask2Btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-50 py-2 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                New Puzzle
+            </button>
+
+            <p id="feedback2" class="text-xl font-bold mt-4"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const taskNumberSpan = document.getElementById('taskNumber');
+            const prevTaskBtn = document.getElementById('prevTaskBtn');
+            const nextTaskBtn = document.getElementById('nextTaskBtn');
+            const task1Div = document.getElementById('task1');
+            const task2Div = document.getElementById('task2');
+
+            // Task 1 elements
+            const targetColorDiv = document.getElementById('targetColor');
+            const guessColorDiv = document.getElementById('guessColor');
+            const hexInput = document.getElementById('hexInput');
+            const puzzleCodeInput = document.getElementById('puzzleCodeInput');
+            const puzzleCodeBtn = document.getElementById('puzzleCodeBtn');
+            const guessBtn = document.getElementById('guessBtn');
+            const guessCounterSpan = document.getElementById('guessCounter');
+            const distanceOutput = document.getElementById('distanceOutput');
+            const correctCodeOutput = document.getElementById('correctCodeOutput');
+            const correctCodeValueSpan = document.getElementById('correctCodeValue');
+
+            // Task 2 elements
+            const targetHexCodeDiv = document.getElementById('targetHexCode');
+            const colorPaletteDiv = document.getElementById('colorPalette');
+            const feedback2Div = document.getElementById('feedback2');
+            const resetTask2Btn = document.getElementById('resetTask2Btn');
+
+            // State
+            let state = {
+                currentTask: 1,
+                targetHex1: '',
+                guessCount1: 0,
+                targetHex2: '',
+            };
+
+            // Seeding mechanism
+            let currentSeed = null;
+
+            function seededRandom(s) {
+                const a = 1664525;
+                const c = 1013904223;
+                const m = 4294967296; // 2^32
+                s = (a * s + c) % m;
+                currentSeed = s;
+                return s / m;
+            }
+
+            // Helper Functions
+            function hexToRgb(hex) {
+                const bigint = parseInt(hex.substring(1), 16);
+                const r = (bigint >> 16) & 255;
+                const g = (bigint >> 8) & 255;
+                const b = bigint & 255;
+                return { r, g, b };
+            }
+
+            function rgbToHex(r, g, b) {
+                const toHex = (c) => ('0' + Math.max(0, Math.min(255, c)).toString(16)).slice(-2);
+                return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+            }
+            
+            function calculateDistance(hex1, hex2) {
+                const rgb1 = hexToRgb(hex1);
+                const rgb2 = hexToRgb(hex2);
+                const dr = rgb1.r - rgb2.r;
+                const dg = rgb1.g - rgb2.g;
+                const db = rgb1.b - rgb2.b;
+                return Math.sqrt(dr * dr + dg * dg + db * db);
+            }
+
+            function generateRandomHex(useSeed = false) {
+                const randomValue = useSeed && currentSeed !== null ? seededRandom(currentSeed) : Math.random();
+                const randomColor = Math.floor(randomValue * 16777215).toString(16);
+                return '#' + ('000000' + randomColor).slice(-6);
+            }
+            
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            // Task Logic Functions
+            function setupTask1(isNewGame = true) {
+                if (isNewGame) {
+                    state.targetHex1 = generateRandomHex();
+                    currentSeed = null;
+                }
+                
+                state.guessCount1 = 0;
+                targetColorDiv.style.backgroundColor = state.targetHex1;
+                hexInput.value = '';
+                hexInput.disabled = false;
+                guessBtn.disabled = false;
+                guessBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                guessColorDiv.style.backgroundColor = '#ffffff';
+                distanceOutput.classList.add('hidden');
+                correctCodeOutput.classList.add('hidden');
+                guessCounterSpan.textContent = `Remaining guesses: ${3 - state.guessCount1}`;
+            }
+
+            function setupTask2() {
+                state.targetHex2 = generateRandomHex();
+                targetHexCodeDiv.textContent = state.targetHex2.toUpperCase();
+                
+                feedback2Div.textContent = '';
+                feedback2Div.classList.remove('text-green-400', 'text-red-400');
+                
+                const allColors = [state.targetHex2];
+                const targetRgb = hexToRgb(state.targetHex2);
+                let attempts = 0;
+
+                while (allColors.length < 6 && attempts < 100) {
+                    const randomHex = generateRandomHex();
+                    const randomRgb = hexToRgb(randomHex);
+                    
+                    const dr = Math.abs(targetRgb.r - randomRgb.r);
+                    const dg = Math.abs(targetRgb.g - randomRgb.g);
+                    const db = Math.abs(targetRgb.b - randomRgb.b);
+                    
+                    if (dr > 100 || dg > 100 || db > 100) {
+                        allColors.push(randomHex);
+                    }
+                    attempts++;
+                }
+
+                while (allColors.length < 6) {
+                    allColors.push(generateRandomHex());
+                }
+
+                shuffleArray(allColors);
+
+                colorPaletteDiv.innerHTML = '';
+                allColors.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.classList.add('color-palette-item', 'shadow-lg');
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.setAttribute('data-color', color);
+                    colorPaletteDiv.appendChild(colorDiv);
+                });
+                
+                colorPaletteDiv.querySelectorAll('.color-palette-item').forEach(item => item.style.pointerEvents = 'auto');
+            }
+
+            function updateUI() {
+                taskNumberSpan.textContent = state.currentTask;
+                task1Div.classList.add('hidden');
+                task2Div.classList.add('hidden');
+
+                if (state.currentTask === 1) {
+                    task1Div.classList.remove('hidden');
+                    setupTask1();
+                } else if (state.currentTask === 2) {
+                    task2Div.classList.remove('hidden');
+                    setupTask2();
+                }
+            }
+
+            // Event Listeners
+            prevTaskBtn.addEventListener('click', () => {
+                if (state.currentTask > 1) {
+                    state.currentTask--;
+                    updateUI();
+                }
+            });
+
+            nextTaskBtn.addEventListener('click', () => {
+                if (state.currentTask < 2) {
+                    state.currentTask++;
+                    updateUI();
+                }
+            });
+
+            guessBtn.addEventListener('click', () => {
+                const value = hexInput.value.trim().toUpperCase();
+
+                if (state.guessCount1 >= 3) {
+                    return; // Game over
+                }
+
+                if (/^[0-9A-F]{6}$/i.test(value)) {
+                    const fullHex = '#' + value;
+                    state.guessCount1++;
+                    guessCounterSpan.textContent = `Remaining guesses: ${3 - state.guessCount1}`;
+
+                    guessColorDiv.style.backgroundColor = fullHex;
+                    
+                    distanceOutput.classList.remove('hidden');
+                    const distance = calculateDistance(state.targetHex1, fullHex);
+                    
+                    const distanceTextPrefix = `Distance: `;
+                    const distanceTextSuffix = distance < 80 ? ` - Close to target!` : ``;
+                    distanceOutput.textContent = `${distanceTextPrefix}${distance.toFixed(2)}${distanceTextSuffix}`;
+
+                    if (distance < 80) {
+                        distanceOutput.classList.remove('text-zinc-300');
+                        distanceOutput.classList.add('text-green-400');
+                    } else {
+                        distanceOutput.classList.remove('text-green-400');
+                        distanceOutput.classList.add('text-zinc-300');
+                    }
+
+                    if (state.guessCount1 >= 3) {
+                        hexInput.disabled = true;
+                        guessBtn.disabled = true;
+                        guessBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        correctCodeOutput.classList.remove('hidden');
+                        correctCodeValueSpan.textContent = state.targetHex1.toUpperCase();
+                    }
+                }
+            });
+
+            puzzleCodeBtn.addEventListener('click', () => {
+                let input = puzzleCodeInput.value.trim();
+                let newSeed;
+                if (/^#([0-9A-F]{6})$/i.test(input)) {
+                    newSeed = parseInt(input.substring(1), 16);
+                } else if (!isNaN(parseInt(input))) {
+                    newSeed = parseInt(input);
+                } else {
+                    newSeed = Math.floor(Math.random() * 100000000);
+                }
+                
+                currentSeed = newSeed;
+                state.targetHex1 = generateRandomHex(true);
+                setupTask1(false);
+                puzzleCodeInput.value = '';
+            });
+
+            resetTask2Btn.addEventListener('click', () => {
+                setupTask2();
+            });
+            
+            colorPaletteDiv.addEventListener('click', (event) => {
+                const clickedColor = event.target.getAttribute('data-color');
+                if (clickedColor) {
+                    colorPaletteDiv.querySelectorAll('.color-palette-item').forEach(item => item.style.pointerEvents = 'none');
+
+                    if (clickedColor.toUpperCase() === state.targetHex2.toUpperCase()) {
+                        feedback2Div.textContent = 'You solved it successfully!';
+                        feedback2Div.classList.add('text-green-400');
+                        feedback2Div.classList.remove('text-red-400');
+                    } else {
+                        feedback2Div.textContent = 'Try again';
+                        feedback2Div.classList.add('text-red-400');
+                        feedback2Div.classList.remove('text-green-400');
+                    }
+                }
+            });
+
+            // Initial UI setup
+            updateUI();
+        });
+    </script>
+</body>
+</html>
